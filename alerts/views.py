@@ -176,6 +176,10 @@ def success(request):
     return render(request, 'alerts/success.html')
 
 
+def privacy(request):
+    return render(request, 'alerts/privacy.html')
+
+
 def failure(request):
     raw = request.GET.get('message', 'other')
     messages = {

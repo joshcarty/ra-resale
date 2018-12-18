@@ -29,4 +29,5 @@ class Tracker(models.Model):
     sent = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"<Tracker(event={self.event.title}, available={self.email})>"
+        return (f"<Tracker(event={self.event.title}, available={self.email}, "
+                f"sent={self.sent})>")

@@ -81,6 +81,10 @@ body {
   border-bottom-color: #fff;
 }
 
+.masthead-brand a:hover {
+  text-decoration: none;
+}
+
 @media (min-width: 48em) {
   .masthead-brand {
     float: left;
