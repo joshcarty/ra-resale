@@ -24,7 +24,7 @@ def extract_date(dom):
 
 
 def extract_tickets(dom):
-    tickets = dom.xpath("//li[@id='tickets']")
+    tickets = dom.xpath("//li[@id='tickets']/ul/li")
     for ticket in tickets:
         yield {
             'title': extract_ticket_title(ticket),
@@ -43,7 +43,7 @@ def extract_price(element):
 
 def extract_availability(element):
     mapping = {'closed': False, 'onsale but': True}
-    availability = element.xpath('.//li/@class')[0]
+    availability = element.xpath('./@class')[0]
     return mapping.get(availability, False)
 
 
@@ -121,8 +121,12 @@ def index(request):
             url = form.cleaned_data['url']
             email = form.cleaned_data['email']
             add_tracker(url, email)
-            return HttpResponseRedirect('/')
+            return HttpResponseRedirect('/success')
         return HttpResponse('ERROR: Form not valid.')
 
     form = TrackerForm(label_suffix='')
     return render(request, 'alerts/index.html', {'form': form})
+
+
+def success(request):
+    return render(request, 'alerts/success.html')
