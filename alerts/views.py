@@ -20,7 +20,8 @@ def extract_title(dom):
 
 
 def extract_date(dom):
-    extracted = dom.xpath("//aside[@id='detail']//a[@class='cat-rev']/text()")[0]
+    extracted = dom.xpath("//aside[@id='detail']//a[@class='cat-rev']/text()")
+    extracted = extracted[0]
     return datetime.datetime.strptime(extracted, '%d %b %Y').date()
 
 
@@ -69,26 +70,37 @@ def parse(html):
     }
 
 
+def get_page(url):
+    html = make_request(url)
+    return parse(html.text)
+
+
 def update(request):
     tracked = Tracker.objects.values('event').distinct()
-    tracked = Event.objects.filter(id__in=tracked)
-    for t in tracked:
-        availability = make_request(t.url)
-        availability = parse(availability.text)
-        t.available = availability
-        t.save()
+    tracked_events = Event.objects.filter(id__in=tracked)
+    for event in tracked_events:
+        page = get_page(event.url)
+        update_tickets(page['tickets'], event)
     return HttpResponse('Success')
 
 
-def add_tracker(url, email):
-    page = make_request(url)
-    parsed = parse(page.text)
+def update_tickets(tickets, event):
+    for ticket in tickets:
+        ticket_obj, _ = Ticket.objects.get_or_create(
+            event=event,
+            title=ticket['title'],
+            price=ticket['price'],
+        )
+        ticket_obj.available = ticket['available']
+        yield ticket_obj
 
+
+def update_event(page, url):
     event, _ = Event.objects.get_or_create(
-        title=parsed['title'],
+        title=page['title'],
         url=url,
-        date=parsed['date'],
-        resale_active=parsed['resale_active']
+        date=page['date'],
+        resale_active=page['resale_active']
     )
 
     today = datetime.date.today()
@@ -98,21 +110,28 @@ def add_tracker(url, email):
     if event.resale_active is False:
         raise ValueError('Resale not active')
 
-    event.save()
-    for t in parsed['tickets']:
-        ticket, _ = Ticket.objects.get_or_create(
-            event=event,
-            title=t['title'],
-            price=t['price'],
-        )
-        ticket.available = t['available']
-        ticket.save()
+    return event
 
+
+def update_tracker(email, event, sent):
     tracker, _ = Tracker.objects.get_or_create(
         email=email,
         event=event,
+        sent=sent
     )
-    tracker.sent = False
+    return tracker
+
+
+def add_tracker(url, email):
+    page = get_page(url)
+
+    event = update_event(page, url)
+    event.save()
+
+    for ticket in update_tickets(page['tickets'], event):
+        ticket.save()
+
+    tracker = update_tracker(email, event, sent=False)
     tracker.save()
 
 
