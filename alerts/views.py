@@ -5,6 +5,7 @@ import lxml.etree
 
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
+from django.urls import reverse
 
 from .models import Tracker, Event, Ticket
 from .forms import TrackerForm
@@ -113,6 +114,11 @@ def send(request):
     return HttpResponse('Success')
 
 
+def failure_redirect(message):
+    url = reverse(failure) + f'?message={message}'
+    return HttpResponseRedirect(url)
+
+
 def index(request):
     if request.method == 'POST':
         form = TrackerForm(request.POST)
@@ -120,9 +126,13 @@ def index(request):
         if form.is_valid():
             url = form.cleaned_data['url']
             email = form.cleaned_data['email']
-            add_tracker(url, email)
-            return HttpResponseRedirect('/success')
-        return HttpResponse('ERROR: Form not valid.')
+            try:
+                add_tracker(url, email)
+                return HttpResponseRedirect('/success')
+            except requests.exceptions.MissingSchema:
+                return failure_redirect('url')
+        else:
+            return failure_redirect('form')
 
     form = TrackerForm(label_suffix='')
     return render(request, 'alerts/index.html', {'form': form})
@@ -130,3 +140,20 @@ def index(request):
 
 def success(request):
     return render(request, 'alerts/success.html')
+
+
+def failure(request):
+    raw = request.GET.get('message', 'other')
+    print(raw)
+    messages = {
+        'other': "Not sure what.",
+        'url': "The event page is not valid.",
+        'form': "Something in the form isn't right."
+    }
+    message = messages.get(raw, messages['other'])
+    print(message)
+    return render(
+        request,
+        'alerts/failure.html',
+        {'message': message}
+    )
