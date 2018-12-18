@@ -12,7 +12,7 @@ from .forms import TrackerForm
 
 
 def make_request(url):
-    return requests.get(url)
+    return requests.get(url, timeout=10)
 
 
 def extract_title(dom):
@@ -20,8 +20,8 @@ def extract_title(dom):
 
 
 def extract_date(dom):
-    extracted = dom.xpath("//aside[@id='detail']//a[@class='cat-rev']")[0]
-    return datetime.date.today()
+    extracted = dom.xpath("//aside[@id='detail']//a[@class='cat-rev']/text()")[0]
+    return datetime.datetime.strptime(extracted, '%d %b %Y').date()
 
 
 def extract_tickets(dom):
@@ -48,15 +48,24 @@ def extract_availability(element):
     return mapping.get(availability, False)
 
 
+def extract_resale_active(dom):
+    return 'Resale active' in dom.xpath('//input[@id="resaleMessage"]/@value')
+
+
 def parse(html):
-    dom = lxml.etree.HTML(html)
-    title = extract_title(dom)
-    date = extract_date(dom)
-    tickets = extract_tickets(dom)
+    try:
+        dom = lxml.etree.HTML(html)
+        title = extract_title(dom)
+        date = extract_date(dom)
+        resale_active = extract_resale_active(dom)
+        tickets = list(extract_tickets(dom))
+    except IndexError:
+        raise ValueError('Extraction failed')
     return {
         'title': title,
         'date': date,
-        'tickets': list(tickets)
+        'tickets': tickets,
+        'resale_active': resale_active
     }
 
 
@@ -78,8 +87,17 @@ def add_tracker(url, email):
     event, _ = Event.objects.get_or_create(
         title=parsed['title'],
         url=url,
-        date=parsed['date']
+        date=parsed['date'],
+        resale_active=parsed['resale_active']
     )
+
+    today = datetime.date.today()
+    if (event.date - today).days < 0:
+        raise ValueError('Date passed')
+
+    if event.resale_active is False:
+        raise ValueError('Resale not active')
+
     event.save()
     for t in parsed['tickets']:
         ticket, _ = Ticket.objects.get_or_create(
@@ -92,8 +110,9 @@ def add_tracker(url, email):
 
     tracker, _ = Tracker.objects.get_or_create(
         email=email,
-        event=event
+        event=event,
     )
+    tracker.sent = False
     tracker.save()
 
 
@@ -126,11 +145,26 @@ def index(request):
         if form.is_valid():
             url = form.cleaned_data['url']
             email = form.cleaned_data['email']
+
             try:
                 add_tracker(url, email)
                 return HttpResponseRedirect('/success')
+
             except requests.exceptions.MissingSchema:
                 return failure_redirect('url')
+
+            except (requests.exceptions.Timeout,
+                    requests.exceptions.ConnectionError):
+                return failure_redirect('timeout')
+
+            except ValueError as e:
+                if str(e) == "Date passed":
+                    return failure_redirect('date')
+                if str(e) == 'Extraction failed':
+                    return failure_redirect('extract')
+                if str(e) == 'Resale not active':
+                    return failure_redirect('inactive')
+
         else:
             return failure_redirect('form')
 
@@ -144,14 +178,16 @@ def success(request):
 
 def failure(request):
     raw = request.GET.get('message', 'other')
-    print(raw)
     messages = {
         'other': "Not sure what.",
-        'url': "The event page is not valid.",
-        'form': "Something in the form isn't right."
+        'url': "This doesn't look like a valid event page.",
+        'form': "Something in the form isn't right.",
+        'timeout': "RA took too long to respond. Is the site down?",
+        'date': "This event has already happend.",
+        'extract': "Could not extract ticket information from RA.",
+        'inactive': "Resale is not active for this event."
     }
     message = messages.get(raw, messages['other'])
-    print(message)
     return render(
         request,
         'alerts/failure.html',

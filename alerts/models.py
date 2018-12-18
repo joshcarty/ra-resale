@@ -5,6 +5,7 @@ class Event(models.Model):
     title = models.CharField(max_length=200)
     date = models.DateField('event date')
     url = models.URLField('event url', default='')
+    resale_active = models.BooleanField(default=False)
 
     def __str__(self):
         return f"<Tracker(title={self.title}, url={self.url})>"
