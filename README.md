@@ -1,10 +1,10 @@
 # RA Resale Ticket Alerts
-Get alerts when Resident Advisor tickets become avaiable on resale.
+Get alerts when Resident Advisor tickets become available on resale.
 
 ## Quickstart
 ### Installation
 ```bash
-$ git clone git+https://github.com/joshcarty/ra-resale
+$ git clone https://github.com/joshcarty/ra-resale
 $ cd ra-resale
 $ pip install -r requirments.txt
 ```

@@ -33,8 +33,10 @@ def index(request):
 
             except EventExpiredError:
                 return failure_redirect('date')
+
             except ResaleInactiveError:
                 return failure_redirect('inactive')
+
             except ExtractionError:
                 return failure_redirect('extract')
 
