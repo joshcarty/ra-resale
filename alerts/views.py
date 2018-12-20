@@ -1,5 +1,7 @@
 import datetime
 
+from smtplib import SMTPException
+
 import requests
 
 from django.core import mail
@@ -91,7 +93,7 @@ def failure(request):
 def update(request):
     tracked = Tracker.objects.values('event').distinct()
     tracked_events = Event.objects.filter(id__in=tracked)
-    
+
     for event in tracked_events:
         try:
             page = get_page(event.url)
@@ -101,7 +103,7 @@ def update(request):
                 requests.exceptions.ConnectionError):
                 print(f"Error updating {event.title}")
                 continue
-    
+
     return JsonResponse({
         'response': 'success',
         'updated': [
@@ -155,9 +157,12 @@ def send(request):
     trackers = Tracker.objects.filter(event__in=events, sent=False)
 
     for tracker in trackers:
-        send_mail(tracker.email, tracker.event.title)
-        tracker.sent = True
-        tracker.save()
+        try:
+            send_mail(tracker.email, tracker.event.title)
+            tracker.sent = True
+            tracker.save()
+        except SMTPException:
+            continue
 
     return JsonResponse({
         'response': 'success',
