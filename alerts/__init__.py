@@ -54,7 +54,7 @@ def parse(html):
         resale_active = extract_resale_active(dom)
         tickets = list(extract_tickets(dom))
     except IndexError:
-        raise ValueError('Extraction failed')
+        raise ExtractionError()
     return {
         'title': title,
         'date': date,
@@ -66,3 +66,15 @@ def parse(html):
 def get_page(url):
     html = make_request(url)
     return parse(html.text)
+
+
+class ExtractionError(Exception):
+    pass
+
+
+class ResaleInactiveError(ExtractionError):
+    pass
+
+
+class EventExpiredError(ExtractionError):
+    pass

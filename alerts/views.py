@@ -7,7 +7,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 
-from . import get_page
+from . import get_page, ResaleInactiveError, ExtractionError, EventExpiredError
 from .models import Tracker, Event, Ticket
 from .forms import TrackerForm
 
@@ -31,13 +31,12 @@ def index(request):
                     requests.exceptions.ConnectionError):
                 return failure_redirect('timeout')
 
-            except ValueError as e:
-                if str(e) == "Date passed":
-                    return failure_redirect('date')
-                if str(e) == 'Extraction failed':
-                    return failure_redirect('extract')
-                if str(e) == 'Resale not active':
-                    return failure_redirect('inactive')
+            except EventExpiredError:
+                return failure_redirect('date')
+            except ResaleInactiveError:
+                return failure_redirect('inactive')
+            except ExtractionError:
+                return failure_redirect('extract')
 
         else:
             return failure_redirect('form')
@@ -124,10 +123,10 @@ def update_event(page, url):
 
     today = datetime.date.today()
     if (event.date - today).days < 0:
-        raise ValueError('Date passed')
+        raise EventExpiredError()
 
     if event.resale_active is False:
-        raise ValueError('Resale not active')
+        raise ResaleInactiveError()
 
     return event
 
