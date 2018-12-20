@@ -91,10 +91,17 @@ def failure(request):
 def update(request):
     tracked = Tracker.objects.values('event').distinct()
     tracked_events = Event.objects.filter(id__in=tracked)
+    
     for event in tracked_events:
-        page = get_page(event.url)
-        for ticket in update_tickets(page['tickets'], event):
-            ticket.save()
+        try:
+            page = get_page(event.url)
+            for ticket in update_tickets(page['tickets'], event):
+                ticket.save()
+        except (requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError):
+                print(f"Error updating {event.title}")
+                continue
+    
     return JsonResponse({
         'response': 'success',
         'updated': [
