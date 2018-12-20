@@ -2,7 +2,8 @@ import datetime
 
 import requests
 
-from django.http import HttpResponse, HttpResponseRedirect
+from django.core import mail
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 
@@ -83,11 +84,7 @@ def failure(request):
         'inactive': "Resale is not active for this event."
     }
     message = messages.get(raw, messages['other'])
-    return render(
-        request,
-        'alerts/failure.html',
-        {'message': message}
-    )
+    return render(request, 'alerts/failure.html', {'message': message})
 
 
 def update(request):
@@ -95,8 +92,15 @@ def update(request):
     tracked_events = Event.objects.filter(id__in=tracked)
     for event in tracked_events:
         page = get_page(event.url)
-        update_tickets(page['tickets'], event)
-    return HttpResponse('Success')
+        for ticket in update_tickets(page['tickets'], event):
+            ticket.save()
+    return JsonResponse({
+        'response': 'success',
+        'updated': [
+            {'event': event.title, 'url': event.url}
+            for event in tracked_events
+        ]
+    })
 
 
 def update_tickets(tickets, event):
@@ -147,8 +151,36 @@ def send(request):
         tracker.sent = True
         tracker.save()
 
-    return HttpResponse('Success')
+    return JsonResponse({
+        'response': 'success',
+        'sent': [
+            {'email': tracker.email, 'event': tracker.event.title}
+            for tracker in trackers
+        ]
+    })
 
 
-def send_mail(email, title):
-    print(f"Email sent to {email}. Tickets available for {title}.")
+def send_mail(recipient, title):
+    mail.send_mail(
+        f"Tickets available for {title}.",
+        f"Tickets available for {title}.",
+        'resale.alerts@gmail.com',
+        [recipient],
+        fail_silently=False,
+    )
+    print(f"Email sent to {recipient}. Tickets available for {title}.")
+
+
+def prune(request):
+    expiry = datetime.date.today() - datetime.timedelta(days=7)
+    expired_events = Event.objects.filter(date__lte=expiry)
+    expired_trackers = Tracker.objects.filter(event__in=expired_events)
+    for tracker in expired_trackers:
+        tracker.delete()
+    return JsonResponse({
+        'response': 'success',
+        'pruned': [
+            {'email': tracker.email, 'event': tracker.event.title}
+            for tracker in expired_trackers
+        ]
+    })

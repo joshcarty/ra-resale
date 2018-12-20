@@ -8,7 +8,7 @@ class Event(models.Model):
     resale_active = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"<Tracker(title={self.title}, url={self.url})>"
+        return f"<Event(title={self.title}, url={self.url})>"
 
 
 class Ticket(models.Model):
