@@ -111,3 +111,4 @@ __pycache__/
 db.sqlite3
 app.yaml
 cron.yaml
+static
