@@ -161,7 +161,9 @@ def send(request):
             send_mail(tracker.email, tracker.event.title)
             tracker.sent = True
             tracker.save()
-        except SMTPException:
+        except SMTPException as e:
+            print(f"Failed to send email to {tracker.email}.")
+            print(e)
             continue
 
     return JsonResponse({
@@ -185,7 +187,7 @@ def send_mail(recipient, title):
 
 
 def prune(request):
-    expiry = datetime.date.today() - datetime.timedelta(days=7)
+    expiry = datetime.date.today() - datetime.timedelta(days=5)
     expired_events = Event.objects.filter(date__lte=expiry)
     expired_trackers = Tracker.objects.filter(event__in=expired_events)
     for tracker in expired_trackers:

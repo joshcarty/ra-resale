@@ -1,0 +1,4 @@
+env
+.vscode
+db.sqlite3
+screenshot.png

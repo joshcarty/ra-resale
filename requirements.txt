@@ -1,3 +1,5 @@
 django
 lxml
 requests
+psycopg2-binary
+gunicorn

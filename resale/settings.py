@@ -25,7 +25,11 @@ SECRET_KEY = 'q24!ly5)s6^w!2_)-ach3)x44qd0c5)-izg@#0#=sdkg(^7iki'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: App Engine's security features ensure that it is safe to
+# have ALLOWED_HOSTS = ['*'] when the app is deployed. If you deploy a Django
+# app not on App Engine, make sure to set an appropriate host here.
+# See https://docs.djangoproject.com/en/2.1/ref/settings/
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -74,12 +78,34 @@ WSGI_APPLICATION = 'resale.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+if os.getenv('GAE_APPLICATION', None):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': os.environ.get("DATABASE_NAME", ''),
+            'USER': os.environ.get("DATABASE_USER", ''),
+            'PASSWORD': os.environ.get("DATABASE_PASSWORD", ''),
+            'HOST': os.environ.get("DATABASE_HOST", '')
+        }
     }
-}
+elif os.getenv('GAE_APPLICATION_PROXY', None):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'HOST': '127.0.0.1',
+            'PORT': '5432',
+            'NAME': os.environ.get("DATABASE_NAME", ''),
+            'USER': os.environ.get("DATABASE_USER", ''),
+            'PASSWORD': os.environ.get("DATABASE_PASSWORD", '')
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    }
 
 
 # Password validation
@@ -119,13 +145,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = 'static'
 
 
 # Email configuration
 # https://docs.djangoproject.com/en/2.1/topics/email/
 
 EMAIL_USE_TLS = True
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'resale.alerts@gmail.com'
+EMAIL_HOST = os.environ.get("EMAIL_HOST", '')
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", '')
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", '')
 EMAIL_PORT = 587
