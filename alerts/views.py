@@ -93,7 +93,7 @@ def failure(request):
 
 def not_app_engine_cron(request):
     return (os.environ.get('GAE_APPLICATION') and
-            not request.META.get('X-Appengine-Cron'))
+            not request.META.get('HTTP_X_APPENGINE_CRON'))
 
 
 def update(request):
