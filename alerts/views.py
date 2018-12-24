@@ -142,9 +142,11 @@ def update_event(page, url):
 
     today = datetime.date.today()
     if (event.date - today).days < 0:
+        event.delete()
         raise EventExpiredError()
 
     if event.resale_active is False:
+        event.delete()
         raise ResaleInactiveError()
 
     return event
