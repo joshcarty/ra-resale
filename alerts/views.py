@@ -81,7 +81,8 @@ def failure(request):
     messages = {
         'other': "Not sure what.",
         'url': "This doesn't look like a valid event page.",
-        'form': "Something in the form isn't right.",
+        'form': ("Something in the form wasn't right. Are you sure"
+                 " this is a valid email address and event page?"),
         'timeout': "RA took too long to respond. Is the site down?",
         'date': "This event has already happend.",
         'extract': "Could not extract ticket information from RA.",

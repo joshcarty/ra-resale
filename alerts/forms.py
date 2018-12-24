@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 
 
@@ -12,3 +14,11 @@ class TrackerForm(forms.Form):
     email = forms.EmailField(
         widget=forms.TextInput(attrs={'placeholder': 'john.doe@example.com'})
     )
+
+    def clean_url(self):
+        data = self.cleaned_data['url']
+        pattern = 'https?:\/\/(?:www\.)?residentadvisor.net\/events\/\d+'
+        match = re.search(pattern, data)
+        if not match:
+            raise forms.ValidationError("That doesn't look like an event page.")
+        return match.group(0)
