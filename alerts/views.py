@@ -171,7 +171,7 @@ def send(request):
 
     for tracker in trackers:
         try:
-            send_mail(tracker.email, tracker.event.title)
+            send_mail(tracker)
             tracker.sent = True
             tracker.save()
         except SMTPException as e:
@@ -188,15 +188,19 @@ def send(request):
     })
 
 
-def send_mail(recipient, title):
+def send_mail(tracker):
+    title = tracker.event.title
+    url = tracker.event.url
+    email = tracker.email
     mail.send_mail(
-        f"Tickets available for {title}.",
-        f"Tickets available for {title}.",
-        'resale.alerts@gmail.com',
-        [recipient],
+        subject=f"Tickets available for {title}.",
+        message=f"Tickets available for {title}.",
+        html_message=f"Tickets available for <a href='{url}'>{title}</a>.",
+        from_email='resale.alerts@gmail.com',
+        recipient_list=[email],
         fail_silently=False,
     )
-    print(f"Email sent to {recipient}. Tickets available for {title}.")
+    print(f"Email sent to {email}. Tickets available for {title}.")
 
 
 def prune(request):
