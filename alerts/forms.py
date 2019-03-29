@@ -17,8 +17,8 @@ class TrackerForm(forms.Form):
 
     def clean_url(self):
         data = self.cleaned_data['url']
-        pattern = 'https?:\/\/(?:www\.)?residentadvisor.net\/events\/\d+'
+        pattern = r'https?:\/\/(?:www\.)?residentadvisor.net\/events\/\d+'
         match = re.search(pattern, data)
         if not match:
-            raise forms.ValidationError("That doesn't look like an event page.")
+            raise forms.ValidationError("That doesn't look like an event page")
         return match.group(0)
