@@ -156,9 +156,9 @@ def update_event(page, url):
 def update_tracker(email, event, sent):
     tracker, _ = Tracker.objects.get_or_create(
         email=email,
-        event=event,
-        sent=sent
+        event=event
     )
+    tracker.sent = sent
     return tracker
 
 
