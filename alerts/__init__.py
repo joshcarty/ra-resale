@@ -13,8 +13,8 @@ def extract_title(dom):
 
 
 def extract_date(dom):
-    extracted = dom.xpath("//aside[@id='detail']//a[@class='cat-rev']/text()")
-    extracted = extracted[0]
+    extracted = dom.xpath("//aside[@id='detail']//a/text()")
+    extracted = extracted[0].strip()
     return datetime.datetime.strptime(extracted, '%d %b %Y').date()
 
 
