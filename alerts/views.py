@@ -1,4 +1,5 @@
 import datetime
+from django.utils import timezone
 import os
 
 from smtplib import SMTPException
@@ -140,8 +141,8 @@ def update_event(page, url):
         date=page['date'],
         resale_active=page['resale_active']
     )
-
-    today = datetime.date.today()
+    
+    today = timezone.now().today().date()
     if (event.date - today).days < 0:
         event.delete()
         raise EventExpiredError()
