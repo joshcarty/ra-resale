@@ -180,6 +180,11 @@ def send(request):
             print(e)
             continue
 
+    # reset ticket availability to be updated later
+    for ticket in tickets:
+        ticket.available = False
+        ticket.save()
+
     return JsonResponse({
         'response': 'success',
         'sent': [
