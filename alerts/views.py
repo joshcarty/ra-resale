@@ -194,14 +194,25 @@ def send(request):
     })
 
 
+def create_email_body(url, title, others):
+    people = 'people are'
+    if others == 1:
+        people = 'person is'
+    return (f"Tickets available for <a href='{url}'>{title}</a>. You and "
+           f"{others} other {people} subscribed to alerts for this "
+           f"event.")
+
+
 def send_mail(tracker):
     title = tracker.event.title
     url = tracker.event.url
     email = tracker.email
+    watching = Tracker.objects.filter(event__url=url).count()
+    msg = create_email_body(url, title, others=watching - 1)
     mail.send_mail(
         subject=f"Tickets available for {title}.",
         message=f"Tickets available for {title}.",
-        html_message=f"Tickets available for <a href='{url}'>{title}</a>.",
+        html_message=msg,
         from_email='resale.alerts@gmail.com',
         recipient_list=[email],
         fail_silently=False,
