@@ -20,32 +20,31 @@ def index(request):
     if request.method == 'POST':
         form = TrackerForm(request.POST)
 
-        if form.is_valid():
-            url = form.cleaned_data['url']
-            email = form.cleaned_data['email']
-
-            try:
-                add_tracker(url, email)
-                return HttpResponseRedirect('/success')
-
-            except requests.exceptions.MissingSchema:
-                return failure_redirect('url')
-
-            except (requests.exceptions.Timeout,
-                    requests.exceptions.ConnectionError):
-                return failure_redirect('timeout')
-
-            except EventExpiredError:
-                return failure_redirect('date')
-
-            except ResaleInactiveError:
-                return failure_redirect('inactive')
-
-            except ExtractionError:
-                return failure_redirect('extract')
-
-        else:
+        if not form.is_valid():
             return failure_redirect('form')
+
+        url = form.cleaned_data['url']
+        email = form.cleaned_data['email']
+
+        try:
+            add_tracker(url, email)
+            return HttpResponseRedirect('/success')
+
+        except requests.exceptions.MissingSchema:
+            return failure_redirect('url')
+
+        except (requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError):
+            return failure_redirect('timeout')
+
+        except EventExpiredError:
+            return failure_redirect('date')
+
+        except ResaleInactiveError:
+            return failure_redirect('inactive')
+
+        except ExtractionError:
+            return failure_redirect('extract')
 
     form = TrackerForm(label_suffix='')
     return render(request, 'alerts/index.html', {'form': form})
@@ -117,8 +116,8 @@ def update(request):
                 ticket.save()
         except (requests.exceptions.Timeout,
                 requests.exceptions.ConnectionError):
-                print(f"Error updating {event.title}")
-                continue
+            print(f"Error updating {event.title}")
+            continue
 
     return JsonResponse({
         'response': 'success',
@@ -204,8 +203,8 @@ def create_email_body(url, title, others):
     if others == 1:
         people = 'person is'
     return (f"Tickets available for <a href='{url}'>{title}</a>. You and "
-           f"{others} other {people} subscribed to alerts for this "
-           f"event.")
+            f"{others} other {people} subscribed to alerts for this "
+            f"event.")
 
 
 def send_mail(tracker):
