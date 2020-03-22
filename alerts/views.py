@@ -20,32 +20,31 @@ def index(request):
     if request.method == 'POST':
         form = TrackerForm(request.POST)
 
-        if form.is_valid():
-            url = form.cleaned_data['url']
-            email = form.cleaned_data['email']
-
-            try:
-                add_tracker(url, email)
-                return HttpResponseRedirect('/success')
-
-            except requests.exceptions.MissingSchema:
-                return failure_redirect('url')
-
-            except (requests.exceptions.Timeout,
-                    requests.exceptions.ConnectionError):
-                return failure_redirect('timeout')
-
-            except EventExpiredError:
-                return failure_redirect('date')
-
-            except ResaleInactiveError:
-                return failure_redirect('inactive')
-
-            except ExtractionError:
-                return failure_redirect('extract')
-
-        else:
+        if not form.is_valid():
             return failure_redirect('form')
+
+        url = form.cleaned_data['url']
+        email = form.cleaned_data['email']
+
+        try:
+            add_tracker(url, email)
+            return HttpResponseRedirect('/success')
+
+        except requests.exceptions.MissingSchema:
+            return failure_redirect('url')
+
+        except (requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError):
+            return failure_redirect('timeout')
+
+        except EventExpiredError:
+            return failure_redirect('date')
+
+        except ResaleInactiveError:
+            return failure_redirect('inactive')
+
+        except ExtractionError:
+            return failure_redirect('extract')
 
     form = TrackerForm(label_suffix='')
     return render(request, 'alerts/index.html', {'form': form})
@@ -93,14 +92,20 @@ def failure(request):
     return render(request, 'alerts/failure.html', {'message': message})
 
 
-def not_app_engine_cron(request):
-    return (os.environ.get('GAE_APPLICATION') and
-            not request.META.get('HTTP_X_APPENGINE_CRON'))
+def app_engine_cron(fn):
+    """
+    Ensure that view is only accessible by Google App Engine cron job.
+    """
+    def wraps(request):
+        is_gae = os.environ.get('GAE_APPLICATION')
+        is_cron = request.META.get('HTTP_X_APPENGINE_CRON')
+        if not (is_gae and is_cron):
+            raise Http404('Not App Engine cron.')
+        return fn(request)
+    return wraps
 
 
 def update(request):
-    if not_app_engine_cron(request):
-        raise Http404()
     tracked = Tracker.objects.filter(sent=False).values('event').distinct()
     tracked_events = Event.objects.filter(id__in=tracked)
 
@@ -111,8 +116,8 @@ def update(request):
                 ticket.save()
         except (requests.exceptions.Timeout,
                 requests.exceptions.ConnectionError):
-                print(f"Error updating {event.title}")
-                continue
+            print(f"Error updating {event.title}")
+            continue
 
     return JsonResponse({
         'response': 'success',
@@ -163,9 +168,8 @@ def update_tracker(email, event, sent):
     return tracker
 
 
+@app_engine_cron
 def send(request):
-    if not_app_engine_cron(request):
-        raise Http404()
     tickets = Ticket.objects.filter(available=True)
     events = list(set(ticket.event for ticket in tickets))
     trackers = Tracker.objects.filter(event__in=events, sent=False)
@@ -199,8 +203,8 @@ def create_email_body(url, title, others):
     if others == 1:
         people = 'person is'
     return (f"Tickets available for <a href='{url}'>{title}</a>. You and "
-           f"{others} other {people} subscribed to alerts for this "
-           f"event.")
+            f"{others} other {people} subscribed to alerts for this "
+            f"event.")
 
 
 def send_mail(tracker):
@@ -220,9 +224,8 @@ def send_mail(tracker):
     print(f"Email sent to {email}. Tickets available for {title}.")
 
 
+@app_engine_cron
 def prune(request):
-    if not_app_engine_cron(request):
-        raise Http404()
     expiry = datetime.date.today() - datetime.timedelta(days=5)
     expired_events = Event.objects.filter(date__lte=expiry)
     expired_trackers = Tracker.objects.filter(event__in=expired_events)
