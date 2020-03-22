@@ -93,14 +93,20 @@ def failure(request):
     return render(request, 'alerts/failure.html', {'message': message})
 
 
-def not_app_engine_cron(request):
-    return (os.environ.get('GAE_APPLICATION') and
-            not request.META.get('HTTP_X_APPENGINE_CRON'))
+def app_engine_cron(fn):
+    """
+    Ensure that view is only accessible by Google App Engine cron job.
+    """
+    def wraps(request):
+        is_gae = os.environ.get('GAE_APPLICATION')
+        is_cron = request.META.get('HTTP_X_APPENGINE_CRON')
+        if not (is_gae and is_cron):
+            raise Http404('Not App Engine cron.')
+        return fn(request)
+    return wraps
 
 
 def update(request):
-    if not_app_engine_cron(request):
-        raise Http404()
     tracked = Tracker.objects.filter(sent=False).values('event').distinct()
     tracked_events = Event.objects.filter(id__in=tracked)
 
@@ -163,9 +169,8 @@ def update_tracker(email, event, sent):
     return tracker
 
 
+@app_engine_cron
 def send(request):
-    if not_app_engine_cron(request):
-        raise Http404()
     tickets = Ticket.objects.filter(available=True)
     events = list(set(ticket.event for ticket in tickets))
     trackers = Tracker.objects.filter(event__in=events, sent=False)
@@ -220,9 +225,8 @@ def send_mail(tracker):
     print(f"Email sent to {email}. Tickets available for {title}.")
 
 
+@app_engine_cron
 def prune(request):
-    if not_app_engine_cron(request):
-        raise Http404()
     expiry = datetime.date.today() - datetime.timedelta(days=5)
     expired_events = Event.objects.filter(date__lte=expiry)
     expired_trackers = Tracker.objects.filter(event__in=expired_events)
