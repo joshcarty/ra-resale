@@ -59,9 +59,8 @@ def extract_availability(element):
     return mapping.get(availability, False)
 
 
-def extract_resale_active(dom):
-    path = '//span[text() = "resale queue is active"]//text()'
-    return any(dom.xpath(path))
+def is_resale_active(tickets):
+    return not any(ticket['available'] for ticket in tickets)
 
 
 def parse_tickets(html):
@@ -78,14 +77,11 @@ def parse_event(html):
         dom = lxml.etree.HTML(html)
         title = extract_title(dom)
         date = extract_date(dom)
-        resale_active = extract_resale_active(dom)
     except IndexError:
         raise ExtractionError()
     return {
         'title': title,
-        'date': date,
-        'resale_active': resale_active,
-        'tickets': []
+        'date': date
     }
 
 
@@ -105,6 +101,7 @@ def get_page(url):
     event = get_event(url)
     tickets = get_tickets(url)
     event['tickets'] = tickets
+    event['resale_active'] = is_resale_active(tickets)
     return event
 
 
