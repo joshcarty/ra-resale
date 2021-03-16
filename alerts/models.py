@@ -16,6 +16,7 @@ class Ticket(models.Model):
     title = models.CharField(max_length=200)
     price = models.CharField(max_length=100)
     available = models.BooleanField(default=False)
+    ignore = models.BooleanField(default=False)
 
     def __str__(self):
         return (f"<Ticket(title={self.title}, event={self.event.title}, "

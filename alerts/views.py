@@ -136,18 +136,35 @@ def update_tickets(tickets, event):
             title=ticket['title'],
             price=ticket['price'],
         )
+        if ticket_obj.ignore is True:
+            # Do not return tickets that have been set to ignore. This allows
+            # events to be manually added even if they do not meet the
+            # `is_resale_active` criteria of being fully sold out.
+            # See Issues #2 and #7.
+
+            continue
+
         ticket_obj.available = ticket['available']
         yield ticket_obj
 
 
 def update_event(page, url):
-    event, _ = Event.objects.get_or_create(
+    event, is_created = Event.objects.get_or_create(
         title=page['title'],
         url=url,
         date=page['date'],
-        resale_active=page['resale_active']
     )
-    
+
+    event.resale_active = page['resale_active']
+
+    if not is_created:
+        # Ensure that existing events are set to have resale active. This
+        # allows events to be manually added even if they do not meet the
+        # `is_resale_active` criteria of being fully sold out.
+        # See Issues #2 and #7.
+
+        event.resale_active = True
+
     today = timezone.now().today().date()
     if (event.date - today).days < 0:
         event.delete()
@@ -171,7 +188,7 @@ def update_tracker(email, event, sent):
 
 @app_engine_cron
 def send(request):
-    tickets = Ticket.objects.filter(available=True)
+    tickets = Ticket.objects.filter(available=True, ignore=False)
     events = list(set(ticket.event for ticket in tickets))
     trackers = Tracker.objects.filter(event__in=events, sent=False)
 
