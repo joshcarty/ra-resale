@@ -103,9 +103,8 @@ def get_event(url):
 
 def get_page(url):
     event = get_event(url)
-    if event['resale_active']:
-        tickets = get_tickets(url)
-        event['tickets'] = tickets
+    tickets = get_tickets(url)
+    event['tickets'] = tickets
     return event
 
 
