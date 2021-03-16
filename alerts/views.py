@@ -105,6 +105,7 @@ def app_engine_cron(fn):
     return wraps
 
 
+@app_engine_cron
 def update(request):
     tracked = Tracker.objects.filter(sent=False).values('event').distinct()
     tracked_events = Event.objects.filter(id__in=tracked)
